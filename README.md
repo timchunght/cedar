@@ -15,6 +15,10 @@ image.
     Sending build context to Docker daemon
     Step 0 : FROM convox/cedar
     ...
+    -----> Compiling for Ruby
+    -----> Compiling Ruby/Rails
+    -----> Installing dependencies using 1.7.12
+           Running: bundle install --without development:test --path vendor/bundle --binstubs vendor/bundle/bin -j4 --deployment
 
     $ docker run cedar-app rails start
     => Rails application starting on http://0.0.0.0:3000
