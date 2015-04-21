@@ -7,9 +7,16 @@ your app into a production image.
 
 ## Usage
 
+    $ cat Dockerfile
     FROM convox/cedar
 
-    CMD ["bundle", "exec", "rails", "start"]
+    $ docker build -t cedar-app .
+    Sending build context to Docker daemon
+    Step 0 : FROM convox/cedar
+    ...
+
+    $ docker run cedar-app rails start
+    => Rails application starting on http://0.0.0.0:3000
 
 ## License
 
