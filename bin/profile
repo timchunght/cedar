@@ -1,0 +1,7 @@
+#!/bin/bash
+
+for FILE in $(ls -1 /app/.profile.d/*.sh); do
+  source $FILE
+done
+
+exec $*
