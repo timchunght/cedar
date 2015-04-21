@@ -10,7 +10,6 @@ image.
 
     $ cat Dockerfile
     FROM convox/cedar
-    ADD . /app
 
     $ docker build -t cedar-app .
     Sending build context to Docker daemon
