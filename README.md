@@ -1,9 +1,10 @@
 # convox/cedar
 
-Heroku's Cedar stack.
+Heroku's Cedar stack as a Docker image.
 
-This image uses Docker's `ONBUILD` statements with Heroku's buildpacks to turn 
-your app into a production image.
+Using this image will include the base Cedar stack image and use
+Heroku's default buildpacks to turn application code into a production
+image.
 
 ## Usage
 
