@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+# bin/compile <build-dir> <cache-dir>
+
+begin
+  require "fileutils"
+  require "uri"
+
+  STDOUT.sync = STDERR.sync = true
+  STDOUT.print("-----> Embedding Logo runtime...")
+
+  build_dir = ARGV[0]
+  logo_path = Dir.glob(File.join(build_dir, "*")).find do |path|
+    File.file?(path) && !File.symlink?(path) && path.match(/\.lgo$/) && (File.size(path) < 100_000)
+  end
+  logo_name = File.basename(logo_path, ".lgo")
+  opt_dir = File.join(File.dirname(File.dirname(__FILE__)), "opt")
+  index_template = File.read(File.join(opt_dir, "index.html"))
+
+  FileUtils.cp(File.join(opt_dir, "config.ru"), File.join(build_dir, "config.ru"))
+
+  logo_source = File.read(logo_path)
+  logo_base64 = URI.encode(logo_source)
+  File.open(File.join(build_dir, "code.js"), "w") do |f|
+    f.puts("var g_app_code = decodeURIComponent(\"#{logo_base64}\");")
+  end
+
+  File.open(File.join(build_dir, "index.html"), "w") do |f|
+    f.puts(index_template.
+      sub("<title>filename</title>", "<title>#{logo_name}</title>").
+      sub("filename.lgo", "#{logo_name}.lgo"))
+  end
+
+  Dir.glob(File.join(build_dir, "*")).each do |path|
+    FileUtils.chmod(0644, path)
+  end
+
+  STDOUT.print(" done\n")
+rescue
+  puts
+  exit(1)
+end

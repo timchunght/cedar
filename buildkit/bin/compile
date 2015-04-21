@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# fail fast
+set -o errexit
+set -o pipefail
+
+compile_dir=$1
+cache_dir=$2
+
+root_dir="$(dirname $(dirname $0))"
+buildpacks_dir="$(dirname $0)/../buildpacks"
+detected_buildpacks="$1/.detected_buildpacks"
+
+cat $detected_buildpacks | while read buildpack_and_name; do
+  buildpack=${buildpack_and_name%%:*}
+  name=${buildpack_and_name#*:}
+  shortname=$(basename $buildpack)
+
+  # scan .profile.d so we can detect changes
+  profiled_scan_old="$(ls -la $compile_dir/.profile.d/ 2>&1 || echo "empty")"
+
+  # compile
+  echo "-----> Compiling for $name"
+  cd $compile_dir; $buildpack/bin/compile $compile_dir $cache_dir
+
+  # scan .profile.d so we can detect changes
+  profiled_scan_new="$(ls -la $compile_dir/.profile.d/ 2>&1 || echo "empty")"
+
+  # if profile.d has not been written, let's generate one from bin/release
+  # to work around old buildpacks
+  if [ "$profiled_scan_old" == "$profiled_scan_new" ]; then
+    if [ -x $buildpack/bin/release ]; then
+      mkdir -p $compile_dir/.profile.d
+      $buildpack/bin/release $compile_dir | $root_dir/bin/profiled > $compile_dir/.profile.d/$shortname.sh
+    fi
+  fi
+
+  # append bin/release process types to Procfile
+  $buildpack/bin/release $compile_dir | $root_dir/bin/procfile $compile_dir/Procfile
+
+done

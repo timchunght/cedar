@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+# This gets replaced by bin/compile for DRY purposes.
+export LEIN_VERSION="##LEIN_VERSION##"
+
+LEIN_JAR=".lein/leiningen-$LEIN_VERSION-standalone.jar"
+LEIN_JAR_URL="https://heroku-buildpack-clojure.s3.amazonaws.com/leiningen-$LEIN_VERSION-standalone.jar"
+
+export LEIN_HOME=${LEIN_HOME:-".lein"}
+export JAVA_CMD=${JAVA_CMD:-"java"}
+export LEIN_JAVA_CMD=${LEIN_JAVA_CMD:-$JAVA_CMD}
+
+# Prefer JVM_OPTS, but fall back to JAVA_OPTS for compatibility
+export JVM_OPTS="${JVM_OPTS:-"$JAVA_OPTS"}"
+export LEIN_JVM_OPTS=${LEIN_JVM_OPTS:-"-Xbootclasspath/a:$LEIN_JAR -Duser.home=$PWD"}
+
+if [ ! -r "$LEIN_JAR" ]; then
+    echo "Downloading Leiningen to $LEIN_JAR now..."
+    mkdir -p "$(dirname "$LEIN_JAR")"
+    curl --silent --show-error --max-time 120 -L -o "$LEIN_JAR" $LEIN_JAR_URL
+fi
+
+# apply context specific CLASSPATH entries
+if [ -r .lein-classpath ]; then
+    CLASSPATH="`cat .lein-classpath`:$LEIN_JAR"
+else
+    CLASSPATH="$LEIN_JAR"
+fi
+
+# fast trampoline?
+if [ "$LEIN_FAST_TRAMPOLINE" = "" ] && [ ! -r .lein-fast-trampoline ]; then
+    TRAMPOLINE_FILE="/tmp/lein-trampoline-$$"
+    trap "rm -f $TRAMPOLINE_FILE" EXIT
+else
+    INPUTS="$@ $(cat project.clj) $(cat $LEIN_HOME/profiles.clj)"
+    INPUT_CHECKSUM=$(echo $INPUTS | shasum - | cut -f 1 -d " ")
+    # Just don't change :target-path in project.clj, mkay?
+    TRAMPOLINE_FILE="target/trampolines/$INPUT_CHECKSUM"
+fi
+
+if [ "$INPUT_CHECKSUM" != "" ] && [ -r "$TRAMPOLINE_FILE" ]; then
+    if [ $DEBUG ]; then
+        echo "Fast trampoline with $TRAMPOLINE_FILE."
+    fi
+    exec sh -c "exec $(cat $TRAMPOLINE_FILE)"
+else
+    export TRAMPOLINE_FILE
+    $LEIN_JAVA_CMD \
+        -XX:+TieredCompilation \
+        $LEIN_JVM_OPTS \
+        -Dfile.encoding=UTF-8 \
+        -Dmaven.wagon.http.ssl.easy=false \
+        -Dmaven.wagon.rto=10000 \
+        -Dleiningen.original.pwd="$PWD" \
+        -Dleiningen.trampoline-file="$TRAMPOLINE_FILE" \
+        -cp "$CLASSPATH" \
+        clojure.main -m leiningen.core.main "$@"
+fi
+
+EXIT_CODE=$?
+
+if [ -r $TRAMPOLINE_FILE ]; then
+    TRAMPOLINE="$(cat $TRAMPOLINE_FILE)"
+    rm $TRAMPOLINE_FILE
+    exec sh -c "exec $TRAMPOLINE"
+else
+    exit $EXIT_CODE
+fi

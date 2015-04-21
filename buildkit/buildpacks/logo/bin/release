@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+# bin/release <build-dir>
+
+STDOUT.puts("--- {}")
