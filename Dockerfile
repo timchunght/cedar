@@ -1,5 +1,6 @@
 FROM heroku/cedar:14
 
+ADD bin/build /usr/bin/build
 ADD bin/profile /usr/bin/profile
 ADD buildkit /buildkit
 
@@ -10,11 +11,11 @@ ONBUILD ENV PORT 3000
 ONBUILD EXPOSE 3000
 
 ONBUILD ENV HOME /app
-ONBUILD WORKDIR /app
-ONBUILD ADD . /app
+
+ONBUILD WORKDIR /build
+ONBUILD ADD . /build
 
 ONBUILD ENTRYPOINT ["/usr/bin/profile"]
 
 ONBUILD RUN mkdir -p /cache
-ONBUILD RUN /buildkit/bin/detect /app /cache
-ONBUILD RUN /buildkit/bin/compile /app /cache
+ONBUILD RUN /usr/bin/build

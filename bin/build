@@ -1,0 +1,14 @@
+#!/bin/sh
+
+buildpack="/buildkit"
+
+if [ -f /build/.buildpacks ]; then
+  git clone https://github.com/ddollar/heroku-buildpack-multi /tmp/multipack
+  buildpack="/tmp/multipack"
+fi
+
+$buildpack/bin/detect /build /cache
+$buildpack/bin/compile /build /cache
+
+rm -rf /app
+cp -r /build /app

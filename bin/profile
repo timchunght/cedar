@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for FILE in $(ls -1 /app/.profile.d/*.sh); do
+for FILE in $(find /app/.profile.d/ -name '*.sh'); do
   source $FILE
 done
 
