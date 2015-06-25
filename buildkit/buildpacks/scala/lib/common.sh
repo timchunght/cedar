@@ -77,7 +77,7 @@ get_scala_version() {
   local playVersion=$4
 
   if [ -n "${playVersion}" ]; then
-    if [ "${playVersion}" = "2.3" ]; then
+    if [ "${playVersion}" = "2.3" ] || [ "${playVersion}" = "2.4" ]; then
       # if we don't grep for the version, and instead use `sbt scala-version`,
       # then sbt will try to download the internet
       scalaVersionLine="$(grep "scalaVersion" "${ctxDir}"/build.sbt | sed -E -e 's/[ \t\r\n]//g')"
@@ -109,7 +109,7 @@ get_supported_play_version() {
 
   if _has_playPluginsFile $ctxDir; then
     pluginVersionLine="$(grep "addSbtPlugin(.\+play.\+sbt-plugin" "${ctxDir}"/project/plugins.sbt | sed -E -e 's/[ \t\r\n]//g')"
-    pluginVersion=$(expr "$pluginVersionLine" : ".\+\(2\.[0-3]\)\.[0-9]")
+    pluginVersion=$(expr "$pluginVersionLine" : ".\+\(2\.[0-4]\)\.[0-9]")
     if [ "$pluginVersion" != 0 ]; then
       echo -n "$pluginVersion"
     fi
@@ -162,7 +162,7 @@ _download_and_unpack_ivy_cache() {
   local scalaVersion=$2
   local playVersion=$3
 
-  baseUrl="http://lang-jvm.s3.amazonaws.com/sbt/v2/sbt-cache"
+  baseUrl="http://lang-jvm.s3.amazonaws.com/sbt/v3/sbt-cache"
   if [ -n "$playVersion" ]; then
     ivyCacheUrl="$baseUrl-play-${playVersion}_${scalaVersion}.tar.gz"
   else
@@ -282,7 +282,7 @@ run_sbt()
 We're sorry this build is failing! If you can't find the issue in application
 code, please submit a ticket so we can help: https://help.heroku.com
 You can also try reverting to our legacy Scala buildpack:
-$ heroku buildpack:set https://github.com/heroku/heroku-buildpack-scala#legacy
+$ heroku buildpacks:set https://github.com/heroku/heroku-buildpack-scala#legacy
 
 Thanks,
 Heroku"

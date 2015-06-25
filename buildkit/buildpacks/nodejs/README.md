@@ -1,24 +1,8 @@
 # Heroku Buildpack for Node.js
 
+![heroku-buildpack-featuerd](https://cloud.githubusercontent.com/assets/51578/6953435/52e1af5c-d897-11e4-8712-35fbd4d471b1.png)
+
 This is the official [Heroku buildpack](http://devcenter.heroku.com/articles/buildpacks) for Node.js apps. If you fork this repository, please **update this README** to explain what your fork does and why it's special.
-
-
-## How it Works
-
-Apps are built via one of four paths:
-
-1. A regular `npm install` (first build; default scenario)
-2. Copy existing `node_modules` from cache, then `npm prune`, then `npm install` (subsequent builds)
-3. Skip dependencies (if package.json doesn't exist but server.js does)
-4. Skip cache, run `npm rebuild` before `npm install` (`node_modules` are checked into source control)
-
-You should only use #3 (omitting package.json) for quick tests or experiments.
-
-You should never use #4 - it's included for backwards-compatibility and will generate warnings.
-**Checking in `node_modules` is an antipattern.**
-For more information, see [the npm docs](https://docs.npmjs.com/misc/faq#should-i-check-my-node_modules-folder-into-git-)
-
-For technical details, check out the [heavily-commented compile script](https://github.com/heroku/heroku-buildpack-nodejs/blob/master/bin/compile).
 
 ## Documentation
 
@@ -30,19 +14,21 @@ For more information about using Node.js and buildpacks on Heroku, see these Dev
 - [Buildpacks](https://devcenter.heroku.com/articles/buildpacks)
 - [Buildpack API](https://devcenter.heroku.com/articles/buildpack-api)
 
+## Locking to a buildpack version
 
-## Legacy Compatibility
+In production, you frequently want to lock all of your dependencies - including
+buildpacks - to a specific version. That way, you can regularly update and
+test them, upgrading with confidence.
 
-For most Node.js apps this buildpack should work just fine.
-If, however, you're unable to deploy using this new version of the buildpack, you can get your app working again by locking it to the previous version:
+First, find the version you want from [the list of buildpack versions](https://github.com/heroku/heroku-buildpack-nodejs/releases).
+Then, specify that version with `buildpacks:set`:
 
 ```
-heroku config:set BUILDPACK_URL=https://github.com/heroku/heroku-buildpack-nodejs#v63 -a my-app
-git commit -am "empty" --allow-empty
-git push heroku master
+heroku buildpacks:set https://github.com/heroku/heroku-buildpack-nodejs#v75 -a my-app
 ```
 
-Then please open a support ticket at [help.heroku.com](https://help.heroku.com/) so we can diagnose and get your app running on the default buildpack.
+If you have trouble upgrading to the latest version of the buildpack, please
+open a support ticket at [help.heroku.com](https://help.heroku.com/) so we can assist.
 
 ## Options
 
@@ -139,6 +125,38 @@ just include an `.npmrc` file in the root of your project:
 registry = 'https://custom-registry.com/'
 ```
 
+### Reasonable defaults for concurrency
+
+This buildpack adds two environment variables: `WEB_MEMORY` and `WEB_CONCURRENCY`.
+You can set either of them, but if unset the buildpack will fill them with reasonable defaults.
+
+- `WEB_MEMORY`: expected memory use by each node process (in MB, default: 512)
+- `WEB_CONCURRENCY`: recommended number of processes to Cluster based on the current environment
+
+Clustering is not done automatically; concurrency should be part of the app,
+usually via a library like [throng](https://github.com/hunterloftis/throng).
+Apps without any clustering mechanism will remain unaffected by these variables.
+
+This behavior allows your app to automatically take advantage of larger containers.
+The default settings will cluster
+1 process on a 1X dyno, 2 processes on a 2X dyno, and 12 processes on a PX dyno.
+
+For example, when your app starts:
+
+```
+app[web.1]: Detected 1024 MB available memory, 512 MB limit per process (WEB_MEMORY)
+app[web.1]: Recommending WEB_CONCURRENCY=2
+app[web.1]:
+app[web.1]: > example-concurrency@1.0.0 start /app
+app[web.1]: > node server.js
+app[web.1]: Listening on 51118
+app[web.1]: Listening on 51118
+```
+
+Notice that on a 2X dyno, the
+[example concurrency app](https://github.com/heroku-examples/node-concurrency)
+listens on two processes concurrently.
+
 ### Chain Node with multiple buildpacks
 
 This buildpack automatically exports node, npm, and any node_modules binaries
@@ -161,10 +179,10 @@ To make changes to this buildpack, fork it on Github. Push up changes to your fo
 heroku create --buildpack <your-github-url>
 
 # Configure an existing Heroku app to use your buildpack
-heroku config:set BUILDPACK_URL=<your-github-url>
+heroku buildpacks:set <your-github-url>
 
 # You can also use a git branch!
-heroku config:set BUILDPACK_URL=<your-github-url>#your-branch
+heroku buildpacks:set <your-github-url>#your-branch
 ```
 
 ## Testing
@@ -175,14 +193,14 @@ Heroku's Cedar and Cedar-14 containers.
 To run the test suite:
 
 ```
-test/docker
+make test
 ```
 
 Or to just test in cedar or cedar-14:
 
 ```
-test/docker cedar
-test/docker cedar-14
+make test-cedar-10
+make test-cedar-14
 ```
 
 The tests are run via the vendored [shunit2](http://shunit2.googlecode.com/svn/trunk/source/2.1/doc/shunit2.html)
