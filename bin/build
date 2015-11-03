@@ -7,6 +7,7 @@ if [ -f /build/.buildpacks ]; then
   buildpack="/tmp/multipack"
 fi
 
+export $(cat /build/.env | xargs)
 $buildpack/bin/detect /build /cache
 $buildpack/bin/compile /build /cache
 
