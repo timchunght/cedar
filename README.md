@@ -23,6 +23,9 @@ image.
     $ docker run cedar-app rails start
     => Rails application starting on http://0.0.0.0:3000
 
+## TODOs
+How to inject environment variables before the building process begin like ``heroku config:set key=value``
+
 ## License
 
 Apache 2.0 &copy; 2015 Convox, Inc.
