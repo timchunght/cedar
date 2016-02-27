@@ -7,9 +7,11 @@ if [ -f /build/.buildpacks ]; then
   buildpack="/tmp/multipack"
 fi
 
-export $(cat /build/.env | xargs)
 $buildpack/bin/detect /build /cache
 $buildpack/bin/compile /build /cache
-
+exit_code=$?
+if [ $exit_code != 0 ]; then 
+  exit $exit_code; 
+fi
 rm -rf /app
 cp -r /build /app
